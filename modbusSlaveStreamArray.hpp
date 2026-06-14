@@ -1,0 +1,105 @@
+#pragma once
+#include "modbusStream.hpp"
+#include "modbusSlave.hpp"
+
+//30 read stream
+//   request
+// 1b - slaveID
+// 1b - funcCode
+// 1b - streamID
+// 1b - repeat (1 - повторить предыдущий пакет / 0 - продолжить)
+//   responce
+// 1b - slaveID
+// 1b - funcCode
+// 1b - streamID
+// 1b - byteCount (0-250)
+// 0-250b data 
+//
+// Опрос буфера должен вестить до получения ответа длиной 0 байт,
+// который подтверждает, что приём окончен
+
+
+//31 write stream
+//   request
+// 1b - slaveID
+// 1b - funcCode
+// 1b - streamID
+// 1b - byteCount (0-248)
+// 0-248b data
+//   responce
+// 1b - slaveID
+// 1b - funcCode
+// 1b - streamID
+// 1b - byteCount
+//
+// После окончания записи необходимо отправить пакет длиной 0b
+// для подтверждения окончания передачи
+
+// если запись/чтение	не удались - ошибка 4
+
+template<uint8_t arraySize>
+class ModbusSlaveStreamArray
+{
+	std::array<ModbusStreamInterface*, arraySize> streams;
+	
+public:
+	const std::function<void(ModbusBuffer*)> readStreamFunctor = [this](
+		ModbusBuffer* buffer)
+		{this->readStream(buffer); };
+	const std::function<void(ModbusBuffer*)> writeStreamFunctor = [this](
+		ModbusBuffer* buffer)
+		{this->writeStream(buffer); };
+
+
+
+	ModbusSlaveStreamArray(ModbusSlave& slave)
+		:streams(nullptr)
+	{
+		slave.bindHandler(readStreamFunctor, 30);
+		slave.bindHandler(writeStreamFunctor, 31);
+	}
+
+ 	void readStream(ModbusBuffer* buffer)
+	{//обработка запроса
+		buffer->start_read();
+
+		uint8_t slave, func_code, streamID, repeat;
+		buffer->read(slave);
+		buffer->read(func_code);
+
+		buffer->read(streamID);
+		buffer->read(repeat);
+
+		buffer->stop();
+		if (streams[streamID] == nullptr || !streams[streamID]->transmittionMode())
+		{
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
+			return;
+		}
+		streams[streamID].receive(buffer);
+	}
+	void writeStream(ModbusBuffer* buffer)
+	{
+		uint8_t slave, func_code, streamID, byteCount;
+		buffer->read(slave);
+		buffer->read(func_code);
+
+		buffer->read(streamID);
+		buffer->read(byteCount);
+
+		buffer->stop();
+		if (streams[streamID] == nullptr || !streams[streamID]->receptionMode())
+		{
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
+			return;
+		}
+		streams[streamID].transmit(buffer);
+	}
+
+	void bindStream(ModbusStreamInterface* stream, uint16_t id)
+	{
+		if (id > streams.size())
+			return;
+		streams[id] = stream;
+	}
+};
