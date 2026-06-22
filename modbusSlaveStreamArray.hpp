@@ -17,6 +17,9 @@
 //
 // ќпрос буфера должен вестить до получени€ ответа длиной 0 байт,
 // который подтверждает, что приЄм окончен
+// если byteCount == 0 добавл€ютс€ 2 байта дополнительной crc16 проверки
+// или 0000 при еЄ отсутствии
+
 
 
 //31 write stream
@@ -34,8 +37,11 @@
 //
 // ѕосле окончани€ записи необходимо отправить пакет длиной 0b
 // дл€ подтверждени€ окончани€ передачи
+// если byteCount == 0 добавл€ютс€ 2 байта дополнительной crc16 проверки
+// или 0000 при еЄ отсутствии
 
 // если запись/чтение	не удались - ошибка 4
+// если провалилась дополнительна€ сrc16 проверка - ошибка 8 и рестарт
 
 template<uint8_t arraySize>
 class ModbusSlaveStreamArray
@@ -76,7 +82,7 @@ public:
 			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
 		}
-		streams[streamID].receive(buffer);
+		streams[streamID]->receive(buffer);
 	}
 	void writeStream(ModbusBuffer* buffer)
 	{
@@ -93,7 +99,7 @@ public:
 			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
 		}
-		streams[streamID].transmit(buffer);
+		streams[streamID]->transmit(buffer);
 	}
 
 	void bindStream(ModbusStreamInterface* stream, uint16_t id)

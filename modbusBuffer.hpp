@@ -6,7 +6,6 @@
 class ModbusBuffer
 {
 	uint8_t data[256];
-	
 	uint16_t packet_size = 0;
 	uint16_t iterator = 0;
 	bool writeMode = false;
@@ -176,17 +175,7 @@ public:
 	}
 	
 
-protected:
-
-	bool getWriteEvent()
-	{
-		if (writeEvent)
-		{
-			writeEvent = false;
-			return true;
-		}
-		return false;
-	}
+	
 
 	//установить контрольную сумму для отправки пакета
 	void setCrc()
@@ -196,7 +185,16 @@ protected:
 		data[iterator] = crc & 0xffu;
 		data[iterator + 1] = crc >> 8;
 	}
-
+	protected:
+	bool getWriteEvent()
+	{
+		if (writeEvent)
+		{
+			writeEvent = false;
+			return true;
+		}
+		return false;
+	}
 	/*
  * Вычисляет CRC-16 для массива байт в формате Modbus.
  *

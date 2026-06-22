@@ -9,16 +9,23 @@
 
 #include "modbusSlave.hpp"
 #include "modbusSlaveCoilArray.hpp"
+#include "modbusSlaveRegisterArray.hpp"
 
 #include "modbusSlaveStreamArray.hpp"
 
-uint16_t transmit(uint8_t* buffer, uint16_t size)
+#include "modbusSlaveDiscreteInputArray.hpp"
+#include "modbusSlave16BitInputArray.hpp"
+
+#include "modbusStringStream.hpp"
+
+
+uint16_t transmit(ModbusBuffer* buffer)
 {
-	for (int i = 0; i < size; ++i)
+	for (int i = 0; i < buffer->size(); ++i)
 	{
-		uint8_t b0 = (buffer[i] >> 4 & 0xf);
+		uint8_t b0 = (buffer->get()[i] >> 4 & 0xf);
 		b0 += b0 > 9 ? 'A' - 10 : '0';
-		uint8_t b1 = (buffer[i] & 0xf);
+		uint8_t b1 = (buffer->get()[i] & 0xf);
 		b1 += b1 > 9 ? 'A' - 10 : '0';
 		std::cout << *(unsigned char*)&b0 << *(unsigned char*)&b1 << ' ';
 	}
@@ -28,6 +35,15 @@ uint16_t transmit(uint8_t* buffer, uint16_t size)
 
 ModbusSlave modbus(transmit, 2);
 ModbusSlaveCoilArray<64> coils(modbus);
+ModbusSlaveRegisterArray<64> reg(modbus);
+
+ModbusSlaveDiscreteInputArray<64> discretInputs(modbus);
+ModbusSlave16BitInputArray<64> i16Input(modbus);
+
+ModbusSlaveStreamArray<16> streams(modbus);
+
+
+
 
 void readModbusPacket(ModbusBuffer* buffer) 
 {
@@ -63,23 +79,31 @@ void readModbusPacket(ModbusBuffer* buffer)
 
 void modbus_init()
 {
+	for (int i = 0; i < 64; ++i)
+		reg[i] = i*2;
+	for (int i = 0; i < 64; ++i)
+		i16Input[i] = i*4;
+	for (int i = 0; i < 64; ++i)
+		discretInputs[i] = i & 1;
+
+
 	while (true)
 	{
 		readModbusPacket(modbus.getBuffer());
-		modbus.processRequest(1);
+		modbus.processRequest();
 	}
 }
 
 int main()
 {
-	coils.coils[1] = 1;
-	coils.coils[3] = 1;
-	coils.coils[4] = 1;
-	coils.coils[7] = 1;
-	coils.coils[9] = 1;
-	coils.coils[13] = 1;
-	coils.coils[17] = 1;
-	modbus_init();
+	coils[1] = 1;
+	coils[3] = 1;
+	coils[4] = 1;
+	coils[7] = 1;
+	coils[9] = 1;
+	coils[13] = 1;
+	coils[17] = 1;
+	//modbus_init();
 
 	
 	/*std::bitset<8> b;

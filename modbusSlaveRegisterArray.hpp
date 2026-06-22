@@ -3,10 +3,9 @@
 #include <array>
 
 template<uint16_t arraySize>
-class ModbusSlaveRegisterArray
+class ModbusSlaveRegisterArray: public std::array<uint16_t, arraySize>
 {
 public:
-	std::array<uint16_t, arraySize> registers;
 
 	const std::function<void(ModbusBuffer*)> writeOneRegisterFunctor = [this](
 		ModbusBuffer* buffer)
@@ -20,10 +19,11 @@ public:
 
 
 	ModbusSlaveRegisterArray(ModbusSlave& slave)
+		:std::array<uint16_t, arraySize>(0)
 	{
 		slave.bindHandler(readMultipleRegistersFunctor, 3);
-		slave.bindHandler(writeOneRegisterFunctor, 5);
-		slave.bindHandler(writeMultipleRegistersFunctor, 0xf);
+		slave.bindHandler(writeOneRegisterFunctor, 6);
+		slave.bindHandler(writeMultipleRegistersFunctor, 0x10);
 	}
 protected:
 
@@ -42,13 +42,19 @@ protected:
 
 		buffer->stop();
 
-		if (address > registers.size())
+		if (buffer->size() != 8)
+		{ // ошибка длины пакета
+			buffer->stop();
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
+			return;
+		}
+		if (address > arraySize)
 		{ // ошибка адреса данных 
-			ModbusSlave::generateErrorResponce(buffer, 5, 2);
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
 		}
 
-		registers[address] = value;
+		(*this)[address] = value;
 
 		//ответ
 		buffer->start_write();
@@ -74,24 +80,24 @@ protected:
 		buffer->read(registersCount);
 		buffer->read(byteCount);
 
-		if ((address + registersCount > registers.size()) || registersCount > 122)
+		if ((address + registersCount > arraySize) || registersCount > 122)
 		{ // ошибка адреса данных
 			buffer->stop();
-			ModbusSlave::generateErrorResponce(buffer, 5, 2);
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
 		}
-		if (registersCount * 2 != byteCount)
+		if (registersCount * 2 != byteCount || buffer->size() != 9 + byteCount)
 		{ // ошибка адреса данных
 			buffer->stop();
-			ModbusSlave::generateErrorResponce(buffer, 5, 2);
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
 			return;
 		}
 
-		for (int i = address; i < address + registerCount; ++i)
+		for (int i = address; i < address + registersCount; ++i)
 		{
 			uint16_t temp;
 			buffer->read(temp);
-			registers[i] = temp;
+			(*this)[i] = temp;
 		}
 		buffer->stop();
 
@@ -121,10 +127,15 @@ protected:
 
 		buffer->stop();
 
-		if ((address + registersCount > registers.size()) || registersCount > 122)
-		{ // ошибка адреса данных
+		if (buffer->size() != 8)
+		{ // ошибка длины пакета
 			buffer->stop();
-			ModbusSlave::generateErrorResponce(buffer, 5, 2);
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
+			return;
+		}
+		if ((address + registersCount > arraySize) || registersCount > 122)
+		{ // ошибка адреса данных
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
 		}
 
@@ -139,7 +150,7 @@ protected:
 		buffer->write(byteCount);
 
 		for (int i = address; i < address + registersCount; ++i)
-			buffer->write<uint16_t>(registers[i]);
+			buffer->write<uint16_t>((*this)[i]);
 
 		buffer->stop();
 	}

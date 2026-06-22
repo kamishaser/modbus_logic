@@ -15,6 +15,8 @@ public:
 	{
 		return false;
 	}
+	virtual void restartReception();
+	virtual void restartTransmittion();
 
 	//принять пакет данных. Возращает 0 или код ошибки
 	virtual uint8_t receive(ModbusBuffer* buffer);

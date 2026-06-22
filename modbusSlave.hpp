@@ -7,10 +7,10 @@
 class ModbusSlave
 {
 	ModbusBuffer buffer;
-
+	uint32_t requestCounter = 0;
 	uint8_t slaveID;
 
-	std::function<uint16_t(uint8_t*, uint16_t)> transmitFunc;
+	std::function<uint16_t(ModbusBuffer*)> transmitFunc;
 
 #ifndef MODBUS_SLAVE_HANDLER_COUNT
 #define MODBUS_SLAVE_HANDLER_COUNT 32
@@ -26,7 +26,7 @@ public:
 	//transmitF указатель на функцию отправки ответа 
 	//с аргументами (uint8_t* buffer, uint16_t length)
 	//ответом является результат отправки, где 0 - успех
-	ModbusSlave(std::function<uint8_t(uint8_t*, uint16_t)> transmitF, uint8_t slaveid)
+	ModbusSlave(std::function<uint8_t(ModbusBuffer*)> transmitF, uint8_t slaveid)
 		:slaveID(slaveid), transmitFunc(transmitF), handlers{ nullptr }
 	{}
 
@@ -49,8 +49,9 @@ public:
 		buffer.stop();
 		if (buffer.size() >= 254) //Ошибка длины пакета
 			return 0;
+		buffer.data[0] = slaveID; //защита от дурака
 		buffer.setCrc();
-		return transmitFunc(buffer.data, buffer.size());
+		return transmitFunc(&buffer);
 	}
 
 	//аргументы (handler, func_code)
@@ -74,7 +75,7 @@ public:
 	}
 
 	//обработать запрос. Требуется заранее заполнить буффер
-	void processRequest(bool ignore_crc = false)
+	void processRequest()
 	{
 		if (buffer.size() < 4)
 			return;
@@ -84,12 +85,17 @@ public:
 		buffer.read(slave);
 		buffer.read(func_code);
 
-		if (slave != slaveID || !(buffer.isModbusPacketValid() || ignore_crc))
+		//игнорировать запрос
+		if (slave != slaveID || !buffer.isModbusPacketValid())
 			return;
+
+		++requestCounter;
 
 		//недопустимый код функции
 		if (func_code >= MODBUS_SLAVE_HANDLER_COUNT || handlers[func_code] == nullptr)
 		{
+			if (func_code > 127)
+				func_code = 0;
 			generateErrorResponce(&buffer, func_code, 1);
 			transmit();
 			return;
@@ -112,8 +118,12 @@ public:
 		buffer->stop();
 	}
 
-	void setTransmitFunc(std::function<uint8_t(uint8_t*, uint16_t)> transmitF)
+	void setTransmitFunc(std::function<uint8_t(ModbusBuffer*)> transmitF)
 	{
 		transmitFunc = transmitF;
+	}
+	uint32_t getRequestCount() const
+	{
+		return requestCounter;
 	}
 };

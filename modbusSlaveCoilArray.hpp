@@ -2,11 +2,10 @@
 #include "modbusSlave.hpp"
 #include <bitset>
 
-template<uint16_t coilNumber>
-class ModbusSlaveCoilArray
+template<uint16_t size>
+class ModbusSlaveCoilArray: public std::bitset<size>
 {
 public:
-	std::bitset<coilNumber> coils;
 
 	const std::function<void(ModbusBuffer*)> writeOneCoilFunctor = [this](
 		ModbusBuffer* buffer)
@@ -24,6 +23,10 @@ public:
 		slave.bindHandler(readMultipleCoilsFunctor, 1);
 		slave.bindHandler(writeOneCoilFunctor, 5);
 		slave.bindHandler(writeMultipleCoilsFunctor, 0xf);
+	}
+	constexpr uint16_t get_size()
+	{
+		return size;
 	}
 protected:
 
@@ -43,18 +46,24 @@ protected:
 		buffer->stop();
 		
 
-		if (address > coils.size())
-		{ // ошибка адреса данных 
-			ModbusSlave::generateErrorResponce(buffer, 5, 2);
+		if (buffer->size() != 8)
+		{ // ошибка длины пакета
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
 			return;
 		}
+		if (address > size)
+		{ // ошибка адреса данных 
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
+			return;
+		}
+
 		if (value == 0xFF00)
-			coils[address] = 1;
+			(*this)[address] = 1;
 		else if (value == 0x0000)
-			coils[address] = 0;
+			(*this)[address] = 0;
 		else
 		{ // ошибка значения данных 
-			return ModbusSlave::generateErrorResponce(buffer, 5, 3);
+			return ModbusSlave::generateErrorResponce(buffer, func_code, 3);
 		}
 
 		//генерация ответа
@@ -89,8 +98,13 @@ protected:
 		//переписываем byteCount ввиду ошибки используемой master программы
 		byteCount = (coilCount & 0x7) ? coilCount / 8 + 1 : coilCount / 8;
 
-		if (coils.size() < address + coilCount)
-		{
+		if (buffer->size() != 9 + byteCount)
+		{ // ошибка длины пакета
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
+			return;
+		}
+		if (size < address + coilCount)
+		{ // выход за предел массива
 			buffer->stop();
 			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
@@ -99,21 +113,21 @@ protected:
 		for (; i1 < byteCount - 1; ++i1)
 		{
 			buffer->read<uint8_t>(data);
-			coils[pos + 0] = data        & 1;
-			coils[pos + 1] = (data >> 1) & 1;
-			coils[pos + 2] = (data >> 2) & 1;
-			coils[pos + 3] = (data >> 3) & 1;
-			coils[pos + 4] = (data >> 4) & 1;
-			coils[pos + 5] = (data >> 5) & 1;
-			coils[pos + 6] = (data >> 6) & 1;
-			coils[pos + 7] = (data >> 7) & 1;
+			(*this)[pos + 0] = data        & 1;
+			(*this)[pos + 1] = (data >> 1) & 1;
+			(*this)[pos + 2] = (data >> 2) & 1;
+			(*this)[pos + 3] = (data >> 3) & 1;
+			(*this)[pos + 4] = (data >> 4) & 1;
+			(*this)[pos + 5] = (data >> 5) & 1;
+			(*this)[pos + 6] = (data >> 6) & 1;
+			(*this)[pos + 7] = (data >> 7) & 1;
 			pos += 8;
 		}
 
 		//последний байт
 		buffer->read<uint8_t>(data);
 		for (int16_t i2 = 0; i2 < (coilCount - 8 * (byteCount - 1)); ++i2)
-			coils[pos + i2] = (data >> i2) & 1;
+			(*this)[pos + i2] = (data >> i2) & 1;
 		buffer->stop();
 
 		//формирование ответа
@@ -140,8 +154,21 @@ protected:
 		buffer->read(coilCount);
 
 		buffer->stop();
+
+		if (buffer->size() != 8)
+		{ // ошибка длины пакета
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
+			return;
+		}
+
+		if (size < address + coilCount)
+		{ // выход за предел массива
+			buffer->stop();
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
+			return;
+		}
 		
-		if (address + coilCount > coils.size() || coilCount == 0 || coilCount > 1024)
+		if (address + coilCount > size || coilCount == 0 || coilCount > 1024)
 		{ // ошибка значения данных 
 			return ModbusSlave::generateErrorResponce(buffer, 5, 2);
 		}
@@ -163,21 +190,21 @@ protected:
 		for (; i1 < byteCount - 1u; ++i1)
 		{
 			data = 0;
-			data =             coils[pos + 7];
-			data = data << 1 | coils[pos + 6];
-			data = data << 1 | coils[pos + 5];
-			data = data << 1 | coils[pos + 4];
-			data = data << 1 | coils[pos + 3];
-			data = data << 1 | coils[pos + 2];
-			data = data << 1 | coils[pos + 1];
-			data = data << 1 | coils[pos + 0];
+			data =             (*this)[pos + 7];
+			data = data << 1 | (*this)[pos + 6];
+			data = data << 1 | (*this)[pos + 5];
+			data = data << 1 | (*this)[pos + 4];
+			data = data << 1 | (*this)[pos + 3];
+			data = data << 1 | (*this)[pos + 2];
+			data = data << 1 | (*this)[pos + 1];
+			data = data << 1 | (*this)[pos + 0];
 			buffer->write<uint8_t>(data);
 			pos += 8;
 		}
 		data = 0;
 		//последний байт
 		for (int16_t i2 = 0; i2 < (coilCount - 8*(byteCount-1)); ++i2)
-			data |= (uint8_t)coils[pos + i2] << i2;
+			data |= (uint8_t)(*this)[pos + i2] << i2;
 		buffer->write<uint8_t>(data);
 		buffer->stop();
 		return;

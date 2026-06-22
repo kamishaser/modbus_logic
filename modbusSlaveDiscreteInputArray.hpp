@@ -3,12 +3,11 @@
 #include "modbusSlave.hpp"
 #include <bitset>
 
-template<uint16_t coilNumber>
-class ModbusSlaveDiscreteInputArray
+template<uint16_t size>
+class ModbusSlaveDiscreteInputArray: public std::bitset<size>
 {
 public:
-	std::bitset<coilNumber> coils;
-
+	std::bitset<size> eventMode;
 	const std::function<void(ModbusBuffer*)> readFunctor = [this](
 		ModbusBuffer* buffer)
 		{this->read(buffer); };
@@ -36,7 +35,18 @@ protected:
 
 		buffer->stop();
 
-		if (address + coilCount > coils.size() || coilCount == 0 || coilCount > 1024)
+		if (buffer->size() != 8)
+		{ // ошибка длины пакета
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
+			return;
+		}
+		if (size < address + coilCount)
+		{ // выход за предел массива
+			buffer->stop();
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
+			return;
+		}
+		if (address + coilCount > size || coilCount == 0 || coilCount > 1024)
 		{ // ошибка значения данных 
 			return ModbusSlave::generateErrorResponce(buffer, 5, 2);
 		}
@@ -58,21 +68,23 @@ protected:
 		for (; i1 < byteCount - 1u; ++i1)
 		{
 			data = 0;
-			data = coils[pos + 7];
-			data = data << 1 | coils[pos + 6];
-			data = data << 1 | coils[pos + 5];
-			data = data << 1 | coils[pos + 4];
-			data = data << 1 | coils[pos + 3];
-			data = data << 1 | coils[pos + 2];
-			data = data << 1 | coils[pos + 1];
-			data = data << 1 | coils[pos + 0];
+			for (int16_t i2 = 0; i2 < 8; ++i2)
+			{
+				data |= (uint8_t)(*this)[pos + i2] << i2;
+				(*this)[pos + i2] = (*this)[pos + i2] && !eventMode[pos + i2];
+			}
+			
 			buffer->write<uint8_t>(data);
+			
 			pos += 8;
 		}
 		data = 0;
 		//последний байт
 		for (int16_t i2 = 0; i2 < (coilCount - 8 * (byteCount - 1)); ++i2)
-			data |= (uint8_t)coils[pos + i2] << i2;
+		{
+			data |= (uint8_t)(*this)[pos + i2] << i2;
+			(*this)[pos + i2] = (*this)[pos + i2] && !eventMode[pos + i2];
+		}
 		buffer->write<uint8_t>(data);
 		buffer->stop();
 		return;

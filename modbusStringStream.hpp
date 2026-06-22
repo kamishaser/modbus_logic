@@ -79,7 +79,7 @@ public:
 		buffer->stop();
 	}
 	
-	virtual uint8_t receive(ModbusBuffer* buffer)
+	virtual uint8_t receive(ModbusBuffer* buffer) override
 	{
 		uint8_t slave, func_code, streamID, byteCount;
 		buffer->start_read();
@@ -101,4 +101,15 @@ public:
 		buffer->write(byteCount);
 		buffer->stop();
 	}
+
+	virtual void restartTransmittion() override
+	{
+		seekg(std::ios_base::beg);
+	}
+
+	virtual void restartReception() override
+	{
+		seekp(std::ios_base::beg);
+	}
+	
 };

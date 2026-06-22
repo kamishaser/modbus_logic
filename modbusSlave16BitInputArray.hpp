@@ -3,17 +3,17 @@
 #include <array>
 
 template<uint16_t arraySize, bool ref = false>
-class ModbusSlave16BitInputArray
+class ModbusSlave16BitInputArray : public std::array<uint16_t, arraySize>
 {
 public:
-	std::array<uint16_t, arraySize> registers;
 
 	const std::function<void(ModbusBuffer*)> readMultipleRegistersFunctor = [this](
 		ModbusBuffer* buffer)
 		{this->readMultipleRegisters(buffer); };
 
 
-	ModbusSlaveRegisterArray(ModbusSlave& slave)
+	ModbusSlave16BitInputArray(ModbusSlave& slave)
+		:std::array<uint16_t, arraySize>(0)
 	{
 		slave.bindHandler(readMultipleRegistersFunctor, 4);
 	}
@@ -34,10 +34,15 @@ protected:
 
 		buffer->stop();
 
-		if ((address + registersCount > registers.size()) || registersCount > 123)
-		{ // ошибка адреса данных
+		if (buffer->size() != 8)
+		{ // ошибка длины пакета
 			buffer->stop();
-			ModbusSlave::generateErrorResponce(buffer, 5, 2);
+			ModbusSlave::generateErrorResponce(buffer, func_code, 9);
+			return;
+		}
+		if ((address + registersCount > arraySize) || registersCount > 122)
+		{ // ошибка адреса данных
+			ModbusSlave::generateErrorResponce(buffer, func_code, 2);
 			return;
 		}
 
@@ -52,7 +57,7 @@ protected:
 		buffer->write(byteCount);
 
 		for (int i = address; i < address + registersCount; ++i)
-			buffer->write<uint16_t>(registers[i]);
+			buffer->write<uint16_t>((*this)[i]);
 
 		buffer->stop();
 	}
