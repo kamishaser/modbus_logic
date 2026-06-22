@@ -1,8 +1,6 @@
 #include <iostream>
 
-#include <vector>
-#include <string>
-#include <sstream>
+
 #include <iomanip>
 
 #include <cassert>
@@ -16,7 +14,8 @@
 #include "modbusSlaveDiscreteInputArray.hpp"
 #include "modbusSlave16BitInputArray.hpp"
 
-#include "modbusStringStream.hpp"
+#include <sstream>
+
 
 
 uint16_t transmit(ModbusBuffer* buffer)
@@ -40,7 +39,7 @@ ModbusSlaveRegisterArray<64> reg(modbus);
 ModbusSlaveDiscreteInputArray<64> discretInputs(modbus);
 ModbusSlave16BitInputArray<64> i16Input(modbus);
 
-ModbusSlaveStreamArray<16> streams(modbus);
+ModbusSlaveStreamArray<16> streams1(modbus);
 
 
 

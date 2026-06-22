@@ -4,6 +4,18 @@
 #include <cstdint>
 #include "modbusBuffer.hpp"
 
+#ifndef MODBUS_SLAVE_HANDLER_COUNT
+#define MODBUS_SLAVE_HANDLER_COUNT 32
+#endif
+
+class ModbusSlaveHandlerInterface
+{
+public:
+	virtual ~ModbusSlaveHandlerInterface(){}
+
+	virtual uint8_t expectedPacketSize(ModbusBuffer*) { return 0; }
+	virtual void handle(ModbusBuffer*) {}
+};
 class ModbusSlave
 {
 	ModbusBuffer buffer;
@@ -12,15 +24,11 @@ class ModbusSlave
 
 	std::function<uint16_t(ModbusBuffer*)> transmitFunc;
 
-#ifndef MODBUS_SLAVE_HANDLER_COUNT
-#define MODBUS_SLAVE_HANDLER_COUNT 32
-#endif
-
 	//handlers - массив указателей на функции-обработчики modbus запросов
 	//аргументы (ModbusBuffer* buffer)
 	//возвращаемое значение - необходимость ответа
 	//если вернёт 0 - ответ не будет отправлен
-	std::function<void(ModbusBuffer*)> handlers[MODBUS_SLAVE_HANDLER_COUNT];
+	ModbusSlaveHandlerInterface* handlers[MODBUS_SLAVE_HANDLER_COUNT];
 public:
 
 	//transmitF указатель на функцию отправки ответа 
@@ -60,16 +68,21 @@ public:
 	//func_code - код функции, которую обрабатывает. Обязательно < 64
 	//если эта цифра не переопределено макросом MODBUS_SLAVE_HANDLER_COUNT
 	//рекомендуется использовать лямбды с захватом
-	void bindHandler(
-		std::function<void(ModbusBuffer*)> hf, uint16_t func_code)
+	bool bindHandler(
+		ModbusSlaveHandlerInterface* handler, uint16_t func_code)
 	{
-		if (func_code < MODBUS_SLAVE_HANDLER_COUNT)
-			handlers[func_code] = hf;
+		if (func_code >= MODBUS_SLAVE_HANDLER_COUNT)
+			return false;
+		if (handlers[func_code] != nullptr)
+			return false;
+			
+		handlers[func_code] = handler;
+		return true;
 	}
 	//шаблон
 	//uint16_t handle(uint8_t* requestBuffer, uint8_t* responseBuffer, uint16_t requestSize)
 
-	std::function<void(ModbusBuffer*)> getHandler(uint16_t func_code)
+	ModbusSlaveHandlerInterface* getHandler(uint16_t func_code)
 	{
 		return handlers[func_code];
 	}
@@ -101,7 +114,7 @@ public:
 			return;
 		}
 
-		handlers[func_code](&buffer);
+		handlers[func_code]->handle(&buffer);
 		
 		if (buffer.getWriteEvent())
 			generateErrorResponce(&buffer, func_code, 4);

@@ -3,7 +3,8 @@
 #include <array>
 
 template<uint16_t arraySize, bool ref = false>
-class ModbusSlave16BitInputArray : public std::array<uint16_t, arraySize>
+class ModbusSlave16BitInputArray : 
+	public ModbusSlaveHandlerInterface, public std::array<uint16_t, arraySize>
 {
 public:
 
@@ -15,9 +16,14 @@ public:
 	ModbusSlave16BitInputArray(ModbusSlave& slave)
 		:std::array<uint16_t, arraySize>(0)
 	{
-		slave.bindHandler(readMultipleRegistersFunctor, 4);
+		slave.bindHandler(this, 4);
 	}
 protected:
+	
+	virtual void handle(ModbusBuffer* buffer) override
+	{
+		readMultipleRegisters(buffer);
+	}
 	void readMultipleRegisters(ModbusBuffer* buffer)
 	{
 		//обработка запроса

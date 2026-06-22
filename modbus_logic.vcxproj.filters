@@ -50,8 +50,5 @@
     <ClInclude Include="modbusSlaveStreamArray.hpp">
       <Filter>Исходные файлы</Filter>
     </ClInclude>
-    <ClInclude Include="modbusStringStream.hpp">
-      <Filter>Исходные файлы</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

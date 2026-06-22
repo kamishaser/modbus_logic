@@ -139,7 +139,6 @@
     <ClInclude Include="modbusSlaveDiscreteInputArray.hpp" />
     <ClInclude Include="modbusSlaveStreamArray.hpp" />
     <ClInclude Include="modbusStream.hpp" />
-    <ClInclude Include="modbusStringStream.hpp" />
     <ClInclude Include="modbusVirtual.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

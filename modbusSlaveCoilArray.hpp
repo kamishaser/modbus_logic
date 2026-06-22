@@ -3,33 +3,37 @@
 #include <bitset>
 
 template<uint16_t size>
-class ModbusSlaveCoilArray: public std::bitset<size>
+class ModbusSlaveCoilArray: public ModbusSlaveHandlerInterface, public std::bitset<size>
 {
 public:
 
-	const std::function<void(ModbusBuffer*)> writeOneCoilFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->writeOneCoil(buffer); };
-	const std::function<void(ModbusBuffer*)> writeMultipleCoilsFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->writeMultipleCoils(buffer); };
-	const std::function<void(ModbusBuffer*)> readMultipleCoilsFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->readMultipleCoils(buffer); };
-
-
 	ModbusSlaveCoilArray(ModbusSlave& slave)
 	{
-		slave.bindHandler(readMultipleCoilsFunctor, 1);
-		slave.bindHandler(writeOneCoilFunctor, 5);
-		slave.bindHandler(writeMultipleCoilsFunctor, 0xf);
+		slave.bindHandler(this, 1);
+		slave.bindHandler(this, 5);
+		slave.bindHandler(this, 0xf);
 	}
 	constexpr uint16_t get_size()
 	{
 		return size;
 	}
-protected:
 
+	virtual void handle(ModbusBuffer* buffer) override
+	{
+		switch (buffer->get()[1])
+		{
+		case 1:
+			readMultipleCoils(buffer);
+			break;
+		case 5:
+			writeOneCoil(buffer);
+			break;
+		case 15:
+			writeMultipleCoils(buffer);
+			break;
+		}
+	}
+protected:
 	void writeOneCoil(ModbusBuffer* buffer)
 	{
 		//обработка запроса

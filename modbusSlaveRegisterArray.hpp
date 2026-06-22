@@ -3,27 +3,32 @@
 #include <array>
 
 template<uint16_t arraySize>
-class ModbusSlaveRegisterArray: public std::array<uint16_t, arraySize>
+class ModbusSlaveRegisterArray: 
+	public ModbusSlaveHandlerInterface, public std::array<uint16_t, arraySize>
 {
 public:
-
-	const std::function<void(ModbusBuffer*)> writeOneRegisterFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->writeOneRegister(buffer); };
-	const std::function<void(ModbusBuffer*)> writeMultipleRegistersFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->writeMultipleRegisters(buffer); };
-	const std::function<void(ModbusBuffer*)> readMultipleRegistersFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->readMultipleRegisters(buffer); };
-
 
 	ModbusSlaveRegisterArray(ModbusSlave& slave)
 		:std::array<uint16_t, arraySize>(0)
 	{
-		slave.bindHandler(readMultipleRegistersFunctor, 3);
-		slave.bindHandler(writeOneRegisterFunctor, 6);
-		slave.bindHandler(writeMultipleRegistersFunctor, 0x10);
+		slave.bindHandler(this, 3);
+		slave.bindHandler(this, 6);
+		slave.bindHandler(this, 0x10);
+	}
+	virtual void handle(ModbusBuffer* buffer) override
+	{
+		switch (buffer->get()[1])
+		{
+		case 3:
+			readMultipleRegisters(buffer);
+			break;
+		case 6:
+			writeOneRegister(buffer);
+			break;
+		case 16:
+			writeMultipleRegisters(buffer);
+			break;
+		}
 	}
 protected:
 

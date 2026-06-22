@@ -1,5 +1,5 @@
 #pragma once
-#include <string.h>
+#include "string.h"
 #include <cstdint>
 #include <bit>
 
@@ -40,7 +40,7 @@ public:
 	}
 	uint16_t size()
 	{
-		return writeMode ? iterator : packet_size;
+		return packet_size;
 	}
 	uint16_t get_iterator()
 	{
@@ -180,6 +180,7 @@ public:
 	//установить контрольную сумму для отправки пакета
 	void setCrc()
 	{
+		stop();
 		uint16_t crc = calculateModbusCRC(data, iterator);
 		packet_size += 2;
 		data[iterator] = crc & 0xffu;

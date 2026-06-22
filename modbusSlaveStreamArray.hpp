@@ -7,7 +7,6 @@
 // 1b - slaveID
 // 1b - funcCode
 // 1b - streamID
-// 1b - repeat (1 - повторить предыдущий пакет / 0 - продолжить)
 //   responce
 // 1b - slaveID
 // 1b - funcCode
@@ -44,25 +43,32 @@
 // если провалилась дополнительная сrc16 проверка - ошибка 8 и рестарт
 
 template<uint8_t arraySize>
-class ModbusSlaveStreamArray
+class ModbusSlaveStreamArray: public ModbusSlaveHandlerInterface
 {
 	std::array<ModbusStreamInterface*, arraySize> streams;
 	
 public:
-	const std::function<void(ModbusBuffer*)> readStreamFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->readStream(buffer); };
-	const std::function<void(ModbusBuffer*)> writeStreamFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->writeStream(buffer); };
 
 
 
 	ModbusSlaveStreamArray(ModbusSlave& slave)
-		:streams(nullptr)
+		:streams{ nullptr }
 	{
-		slave.bindHandler(readStreamFunctor, 30);
-		slave.bindHandler(writeStreamFunctor, 31);
+		slave.bindHandler(this, 30);
+		slave.bindHandler(this, 31);
+	}
+
+	virtual void handle(ModbusBuffer* buffer) override
+	{
+		switch (buffer->get()[1])
+		{
+		case 30:
+			readStream(buffer);
+			break;
+		case 31:
+			writeStream(buffer);
+			break;
+		}
 	}
 
  	void readStream(ModbusBuffer* buffer)
@@ -74,7 +80,6 @@ public:
 		buffer->read(func_code);
 
 		buffer->read(streamID);
-		buffer->read(repeat);
 
 		buffer->stop();
 		if (streams[streamID] == nullptr || !streams[streamID]->transmittionMode())

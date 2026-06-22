@@ -4,7 +4,8 @@
 #include <bitset>
 
 template<uint16_t size>
-class ModbusSlaveDiscreteInputArray: public std::bitset<size>
+class ModbusSlaveDiscreteInputArray: 
+	public ModbusSlaveHandlerInterface, public std::bitset<size>
 {
 public:
 	std::bitset<size> eventMode;
@@ -15,10 +16,13 @@ public:
 
 	ModbusSlaveDiscreteInputArray(ModbusSlave& slave)
 	{
-		slave.bindHandler(readFunctor, 2);
+		slave.bindHandler(this, 2);
 	}
 protected:
-
+	virtual void handle(ModbusBuffer* buffer) override
+	{
+		read(buffer);
+	}
 	void read(ModbusBuffer* buffer)
 	{
 		//обработка запроса
