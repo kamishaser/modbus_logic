@@ -5,13 +5,10 @@
 
 template<uint16_t size>
 class ModbusSlaveDiscreteInputArray: 
-	public ModbusSlaveHandlerInterface, public std::bitset<size>
+	public ModbusSlaveFunctionHandlerInterface, public std::bitset<size>
 {
 public:
 	std::bitset<size> eventMode;
-	const std::function<void(ModbusBuffer*)> readFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->read(buffer); };
 
 
 	ModbusSlaveDiscreteInputArray(ModbusSlave& slave)

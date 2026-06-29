@@ -4,7 +4,7 @@
 
 template<uint16_t arraySize>
 class ModbusSlaveRegisterArray: 
-	public ModbusSlaveHandlerInterface, public std::array<uint16_t, arraySize>
+	public ModbusSlaveFunctionHandlerInterface, public std::array<uint16_t, arraySize>
 {
 public:
 

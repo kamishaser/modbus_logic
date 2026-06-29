@@ -4,14 +4,9 @@
 
 template<uint16_t arraySize, bool ref = false>
 class ModbusSlave16BitInputArray : 
-	public ModbusSlaveHandlerInterface, public std::array<uint16_t, arraySize>
+	public ModbusSlaveFunctionHandlerInterface, public std::array<uint16_t, arraySize>
 {
 public:
-
-	const std::function<void(ModbusBuffer*)> readMultipleRegistersFunctor = [this](
-		ModbusBuffer* buffer)
-		{this->readMultipleRegisters(buffer); };
-
 
 	ModbusSlave16BitInputArray(ModbusSlave& slave)
 		:std::array<uint16_t, arraySize>(0)

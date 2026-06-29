@@ -18,6 +18,11 @@ class ModbusBuffer
 	{
 		packet_size = size;
 	}
+	uint16_t getPacketCrc()
+	{
+		return data[packet_size - 2] | 
+			(static_cast<uint16_t>(data[packet_size - 1]) << 8);
+	}
 public:
 	ModbusBuffer()
 		:data()
@@ -46,6 +51,10 @@ public:
 	{
 		return iterator;
 	}
+	void set_iterator(uint16_t pos)
+	{
+		iterator = pos;
+	}
 
 	//управление
 	void setPacketSize(uint16_t size)
@@ -56,6 +65,7 @@ public:
 	{
 		stop();
 		packet_size = 0;
+		writeEvent = false;
 	}
 
 	//запустить режим чтения с 0
@@ -75,7 +85,10 @@ public:
 	void stop()
 	{
 		if (writeMode)
+		{
 			packet_size = iterator;
+			writeEvent = true;
+		}
 		writeMode = false;
 		readMode = false;
 	}

@@ -1,17 +1,20 @@
 #pragma once
 #include <cstdint>
+#include <vector>
+#include <queue>
+
+#include "modbusTransceiver.h"
+
+
 
 class ModbusMaster
 {
-	std::function<uint16_t(uint8_t*, uint16_t)> transmitFunc;
-public:
 
-	ModbusMaster(std::function<uint8_t(uint8_t*, uint16_t)> transmitF)
-		:transmitFunc(transmitF)
+public:
+	std::vector<ModbusTransceiverInterface*> bus;
+	ModbusMaster()
 	{}
 
-	void handle_responce(uint8_t* buffer, uint16_t length)
-	{
-	}
+
 
 };

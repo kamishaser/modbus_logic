@@ -3,7 +3,7 @@
 #include <bitset>
 
 template<uint16_t size>
-class ModbusSlaveCoilArray: public ModbusSlaveHandlerInterface, public std::bitset<size>
+class ModbusSlaveCoilArray: public ModbusSlaveFunctionHandlerInterface, public std::bitset<size>
 {
 public:
 

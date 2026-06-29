@@ -130,6 +130,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="modbusRequestGenerator.h" />
     <ClInclude Include="modbusSlaveRegisterArray.hpp" />
     <ClInclude Include="modbusBuffer.hpp" />
     <ClInclude Include="modbusMaster.hpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="modbusSlaveDiscreteInputArray.hpp" />
     <ClInclude Include="modbusSlaveStreamArray.hpp" />
     <ClInclude Include="modbusStream.hpp" />
+    <ClInclude Include="modbusTransceiver.h" />
     <ClInclude Include="modbusVirtual.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

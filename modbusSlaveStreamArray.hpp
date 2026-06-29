@@ -43,7 +43,7 @@
 // если провалилась дополнительная сrc16 проверка - ошибка 8 и рестарт
 
 template<uint8_t arraySize>
-class ModbusSlaveStreamArray: public ModbusSlaveHandlerInterface
+class ModbusSlaveStreamArray: public ModbusSlaveFunctionHandlerInterface
 {
 	std::array<ModbusStreamInterface*, arraySize> streams;
 	
