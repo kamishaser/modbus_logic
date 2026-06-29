@@ -4,8 +4,8 @@
 #include "modbusBuffer.hpp"
 #include "modbusTransceiver.h"
 
-#ifndef MODBUS_SLAVE_HANDLER_COUNT
-#define MODBUS_SLAVE_HANDLER_COUNT 32
+#ifndef MODBUS_SLAVE_FUNCTION_HANDLER_COUNT
+#define MODBUS_SLAVE_FUNCTION_HANDLER_COUNT 32
 #endif
 
 class ModbusSlaveFunctionHandlerInterface
@@ -17,9 +17,7 @@ public:
 	// 0 - если невозможно измерить или недостаточно данных дл€ измерени€
 	// >=4 длину пакета
 	//
-	virtual uint8_t expectedPacketSize(ModbusBuffer*) { return 0; }
 	virtual void handle(ModbusBuffer*) {}
-	
 };
 
 class ModbusSlave
@@ -34,11 +32,10 @@ class ModbusSlave
 	
 	uint8_t currentBufferNumber = 0;
 	uint8_t slaveID;
-	uint8_t expectedPacketSize = 0;
 	
 
 	//массив интерфейсов обработчиков modbus запросов
-	ModbusSlaveFunctionHandlerInterface* handlers[MODBUS_SLAVE_HANDLER_COUNT];
+	ModbusSlaveFunctionHandlerInterface* handlers[MODBUS_SLAVE_FUNCTION_HANDLER_COUNT];
 
 	enum class Stage
 	{
@@ -49,7 +46,7 @@ class ModbusSlave
 
 public:
 
-	ModbusSlave(ModbusTransceiverInterface* Transceiver, uint8_t slaveid)
+	constexpr ModbusSlave(ModbusTransceiverInterface* Transceiver, uint8_t slaveid)
 		:slaveID(slaveid), transceiver(Transceiver), handlers{ nullptr }
 	{}
 
@@ -77,7 +74,7 @@ public:
 	bool bindHandler(
 		ModbusSlaveFunctionHandlerInterface* handler, uint16_t func_code)
 	{
-		if (func_code >= MODBUS_SLAVE_HANDLER_COUNT)
+		if (func_code >= MODBUS_SLAVE_FUNCTION_HANDLER_COUNT)
 			return false;
 		if (handlers[func_code] != nullptr)
 			return false;
@@ -177,9 +174,9 @@ public:
 		oldCrc = currentBuffer->getPacketCrc();
 		++requestCounter;
 
-
 		//недопустимый код функции
-		if (func_code >= MODBUS_SLAVE_HANDLER_COUNT || handlers[func_code] == nullptr)
+		if (func_code >= MODBUS_SLAVE_FUNCTION_HANDLER_COUNT || 
+			handlers[func_code] == nullptr)
 		{
 			if (func_code > 127)
 				func_code = 0;
@@ -196,7 +193,6 @@ public:
 			transmit();
 			swapBuffer();
 		}
-
 	}
 protected:
 	//передать сообщение. »звне примен€ть можно только дл€ отложенных ответов
@@ -216,18 +212,11 @@ protected:
 	void swapBuffer()
 	{
 		currentBufferNumber = (uint8_t)!static_cast<bool>(currentBufferNumber);
-	}
-	//обработать запрос. “ребуетс€ заранее заполнить буффер
-	
-	void calculateExpectedPacketLength()
-	{
-		expectedPacketSize = 0; /////////////////////////////
-	}
+	}	
 
 	void resetReception()
 	{
 		getBuffer()->clear();
-		expectedPacketSize = 0;
 	}
 	void updateReception()
 	{
@@ -243,32 +232,18 @@ protected:
 			resetReception();
 			return;
 		}
-		
 
 		if (result == 1)
 		{
-			if (currentBuffer->size() == oldSize)
-				return;
-
-			// 0 - если невозможно измерить или недостаточно данных дл€ измерени€
-			// >=4 длина пакета
-			if (expectedPacketSize == 0 && currentBuffer->size() > 3)
-				calculateExpectedPacketLength();
-
-			if (currentBuffer->size() < expectedPacketSize)
-				return;
+			return;
 		}
-		if ((currentBuffer->size() < 4) ||
-			(expectedPacketSize > 1 && currentBuffer->size() != expectedPacketSize))
+		if (currentBuffer->size() < 4)
 		{
 			resetReception();
 			return;
 		}
-		expectedPacketSize = 0;
 		processRequest();
 		getBuffer()->clear();
-
-		expectedPacketSize = 0;
 	}
 
 	void updateTransmition()

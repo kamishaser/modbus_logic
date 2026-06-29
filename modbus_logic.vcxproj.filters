@@ -56,5 +56,8 @@
     <ClInclude Include="modbusRequestGenerator.h">
       <Filter>Исходные файлы</Filter>
     </ClInclude>
+    <ClInclude Include="modbusInterface.h">
+      <Filter>Исходные файлы</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

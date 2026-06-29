@@ -13,6 +13,7 @@ class ModbusBuffer
 	bool writeEvent = false;
 
 	friend class ModbusSlave;
+	friend class ModbusMaster;
 
 	void set_size(uint16_t size)
 	{
@@ -24,7 +25,7 @@ class ModbusBuffer
 			(static_cast<uint16_t>(data[packet_size - 1]) << 8);
 	}
 public:
-	ModbusBuffer()
+	constexpr ModbusBuffer()
 		:data()
 	{
 	}
@@ -239,8 +240,6 @@ public:
 	 * Проверяет валидность пакета Modbus.
 	 * Предполагается, что последние два байта в массиве — это CRC (в порядке Low Byte, High Byte).
 	 *
-	 * @param packet Массив байт, включая контрольную сумму.
-	 * @param length Общая длина массива.
 	 * @return true, если контрольная сумма верна, иначе false.
 	 */
 	bool isModbusPacketValid() const

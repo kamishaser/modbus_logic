@@ -1,6 +1,7 @@
 #pragma once
 #include "modbusStream.hpp"
 #include "modbusSlave.hpp"
+#include <array>
 
 //30 read stream
 //   request

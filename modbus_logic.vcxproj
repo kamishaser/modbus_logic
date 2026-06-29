@@ -130,6 +130,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="modbusInterface.h" />
     <ClInclude Include="modbusRequestGenerator.h" />
     <ClInclude Include="modbusSlaveRegisterArray.hpp" />
     <ClInclude Include="modbusBuffer.hpp" />
